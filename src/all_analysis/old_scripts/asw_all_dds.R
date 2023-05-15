@@ -12,8 +12,8 @@ library(tximport)
 library(data.table)
 library(DESeq2)
 
-asw_gene_trans_map <- snakemake@input[['asw_gene_trans_map']]
-gene2tx <- fread(asw_gene_trans_map, header = FALSE)
+gene_trans_map <- snakemake@input[['asw_mh_gene_trans_map']]
+gene2tx <- fread(gene_trans_map, header = FALSE)
 tx2gene <- data.frame(gene2tx[, .(V2, V1)])
 
 ##Find all salmon quant files
@@ -32,12 +32,29 @@ setkey(sample_data, sample_name)
 ##create dds object and link to sample data
 dds <- DESeqDataSetFromTximport(txi, colData = sample_data[colnames(txi$counts)], design = ~1)
 ##save dds object
-asw_dds <- snakemake@output[['asw_dds']]
-saveRDS(dds, asw_dds)
+dds <- estimateSizeFactors(dds)
+
+all_dds <- snakemake@output[['all_dds']]
+saveRDS(dds, all_dds)
 
 total_reads_per_sample <- colSums(counts(dds))
 table_counts <- data.table(data.frame(total_reads_per_sample), keep.rownames=TRUE)
 fwrite(table_counts, "output/deseq2/asw_total_counts.csv")
+
+## subset into ASW and MH ##
+##asw gene list
+asw_tx <- subset(tx2gene, grepl("ASW_", V1))
+asw_gene <- unique(asw_tx$V1)
+##mh gene list
+mh_tx <- subset(tx2gene, grepl("MH_", V1))
+mh_gene <- unique(mh_tx$V1)
+
+##subset asw dds
+asw_dds <- dds[asw_gene,]
+saveRDS(asw_dds, snakemake@output[["asw_dds"]])
+##subset mh dds
+mh_dds <- dds[mh_gene,]
+saveRDS(mh_dds, snakemake@output[["mh_dds"]])
 
 # log
 sessionInfo()

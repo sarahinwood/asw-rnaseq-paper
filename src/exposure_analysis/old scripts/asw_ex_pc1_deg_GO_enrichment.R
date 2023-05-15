@@ -2,9 +2,9 @@ library(data.table)
 library(fgsea)
 library(ggplot2)
 
-trinotate_report <- fread("/Volumes/archive/deardenlab/sarahinwood/asw_projects/asw-mh-combined-transcriptome/output/asw_edited_transcript_ids/trinotate_annotation_report.txt", na.strings = ".")
+trinotate_report <- fread("data/asw_mh_transcriptome/output/asw_edited_transcript_ids/trinotate_annotation_report.txt", na.strings = ".")
 gene_ids <- trinotate_report[!is.na(gene_ontology_Pfam), unique(`#gene_id`)]
-res_group <- fread("output/exposed_deseq2/res_group.csv")
+res_group <- fread("output/exposure_deseq2/res_group.csv")
 
 go_annot_list<-data.table(trinotate_report[,unique(unlist(strsplit(gene_ontology_Pfam, "`")))])
 go_annot_table <- go_annot_list[,tstrsplit(V1, "^", fixed=TRUE)]
@@ -30,11 +30,29 @@ setorder(res_group, stat)
 ranks <- res_group[!is.na(stat), stat]
 names(ranks) <- res_group[!is.na(stat), rn]
 
-fgsea_res <- fgsea(pathways, ranks, nperm = 10000)
+fgsea_res <- fgsea(pathways, ranks)
 sorted_fgsea_res <- fgsea_res[order(fgsea_res$padj)]
-sum(sorted_fgsea_res$padj<0.05)
+sorted_fgsea_res_no_na <- sorted_fgsea_res[!is.na(padj)]
+sum(sorted_fgsea_res_no_na$padj<0.05)
 ##subset into only sig terms and merge w/annotations
 sig_fgsea_res <- subset(sorted_fgsea_res, padj < 0.05)
 annot_sig_fgsea <- merge(sig_fgsea_res, go_annot_table, by.x="pathway", by.y="pathway", all.x=TRUE)
-fwrite(annot_sig_fgsea, "output/exposed_deseq2/sig_annot_fgsea_pfam.csv")
+fwrite(annot_sig_fgsea, "output/exposure_deseq2/sig_annot_fgsea_pfam.csv")
 
+##need number of genes in leading edge for lollipop plot
+annot_sig_fgsea$leadingEdge_size <- str_count(annot_sig_fgsea$leadingEdge, "ASW_TRINITY_DN")
+
+##split into 3 tables --> biological process, cellular component and molecular function
+bp_res <- annot_sig_fgsea[annot_sig_fgsea$pathway_kind=="biological_process"]
+cc_res <- annot_sig_fgsea[annot_sig_fgsea$pathway_kind=="cellular_component"]
+mf_res <- annot_sig_fgsea[annot_sig_fgsea$pathway_kind=="molecular_function"]
+
+##lollipop plot
+ggplot(bp_res, aes(reorder(pathway_name, NES), NES)) +
+  geom_segment(aes(y=0, yend=bp_res$NES, x=pathway_name, xend=pathway_name), alpha=0.4)+
+  geom_point(aes(colour=padj, size=leadingEdge_size)) + 
+  labs(x="Biological Process GO Pathway", y="FGSEA Normalized Enrichment Score",
+       colour="Adjusted\nP-Value", size="Leading\nEdge Size") + 
+  coord_flip() +
+  scale_colour_viridis()+
+  theme_bw()

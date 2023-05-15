@@ -26,9 +26,15 @@ dds_file <- snakemake@input[["dds_file"]]
 
 dds <- readRDS(dds_file)
 
-exposure_dds <- dds[,dds$Experiment=="Exposure"]
+microcosm_dds <- dds[,dds$Experiment=="Evasion"]
+saveRDS(microcosm_dds, snakemake@output[["microcosm_dds"]])
 
-saveRDS(exposure_dds, snakemake@output[["exposure_dds"]])
+dunedin_microcosm_dds <- dds[,dds$Location=="Dunedin"]
+saveRDS(dunedin_microcosm_dds, snakemake@output[["dunedin_microcosm_dds"]])
+
+ruakura_microcosm_dds <- dds[,dds$Location=="Ruakura"]
+saveRDS(ruakura_microcosm_dds, snakemake@output[["ruakura_microcosm_dds"]])
+
 
 # log
 sessionInfo()
