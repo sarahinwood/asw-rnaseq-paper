@@ -35,7 +35,7 @@ gene2tx <- fread(gene2tx_file, header = T)
 tx2gene <- data.frame(gene2tx[, .(V2, V1)])
 
 ##Find all salmon quant files
-quant_files <- list.files(path="output/asw_mh_MhV1_concat_salmon", pattern = "quant.sf", full.names=TRUE, recursive = TRUE)
+quant_files <- list.files(path="output/asw_mh_MhFV_concat_salmon", pattern = "quant.sf", full.names=TRUE, recursive = TRUE)
 ##assign names to quant files from folder name
 names(quant_files) <- gsub(".*/(.+)_quant/.*", "\\1", quant_files)
 
@@ -55,7 +55,7 @@ dds <- DESeqDataSetFromTximport(txi, colData = sample_data[colnames(txi$counts)]
 ##estimate size factors on whole dataset
 dds <- estimateSizeFactors(dds)
 ##save whole dds object
-saveRDS(dds, snakemake@output[["mh_asw_MhV1_dds"]])
+saveRDS(dds, snakemake@output[["mh_asw_MhFV_dds"]])
 
 ################################################
 ##subset gene table into ASW, Mh & MhV1 genes ##
@@ -77,10 +77,10 @@ saveRDS(mh_dds, snakemake@output[["mh_dds"]])
 
 ##MhV1 gene list
 mhv1_tx <- subset(tx2gene, grepl("ORF", V1))
-mhv1_gene <- unique(mhv1_tx$V1)
+mhv1_gene <- unique(mhfv_tx$V1)
 ##subset MhV dds
-mhv1_dds <- dds[mhv1_gene,]
-saveRDS(mhv1_dds, snakemake@output[["MhV1_dds"]])
+mhfv_dds <- dds[mhfv_gene,]
+saveRDS(mhv1_dds, snakemake@output[["MhFV_dds"]])
 
 # write log
 sessionInfo()

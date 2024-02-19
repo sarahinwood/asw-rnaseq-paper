@@ -91,39 +91,40 @@ go_old <- ggplot(go_enrich, aes(Description, GeneRatio_percent)) +
   #      axis.text.x=element_blank(),
   #      axis.ticks.x=element_blank())
 
-pfam <- ggplot(pfam_enrich, aes(Description, log_padj)) +
+pfam <- ggplot(pfam_enrich, aes(Description, GeneRatio)) +
   geom_point(aes(size=Count, colour=colour))+
-  labs(x="Pfam domains", y="-log(adj. p-value)",
+  labs(x="Pfam domains", y="GeneRatio",
        size="Leading\nedge size") +
   coord_flip() +
-  scale_size(limits=c(1, 30), range=c(5,10), breaks = c(5,10,15,20,25,30))+
-  scale_y_continuous(limits=c(0,10))+
+  scale_size(limits=c(1, 5), range=c(5,10), breaks = c(1,2,3,4,5))+
+  scale_y_continuous(limits=c(0,0.5))+
   scale_colour_manual(values=c("#440154FF"="#440154FF"), guide='none')+
   theme_bw()
 
-go <- ggplot(go_enrich, aes(Description, log_padj)) +
+go <- ggplot(go_enrich, aes(Description, GeneRatio)) +
   geom_point(aes(colour=pathway_kind, size=Count))+
-  labs(x="Gene ontology terms", y="-log(adj. p-value)",
+  labs(x="Gene ontology terms", y="GeneRatio",
        colour="GO domain", size="Leading\nedge size") +
   coord_flip() +
   scale_colour_viridis(discrete=TRUE, begin=0.5)+
-  scale_size(limits=c(1, 30), range=c(5,10), breaks = c(5,10,15,20,25,30))+
-  scale_y_continuous(limits=c(0,10))+
+  scale_size(limits=c(1, 5), range=c(5,10), breaks = c(1,2,3,4,5))+
+  scale_y_continuous(limits=c(0,0.5))+
   theme_bw()
 
 go_length <- length(go_enrich$Description)
 pfam_length <- length(pfam_enrich$Description)
 plot_length <- (go_length+pfam_length)/4.272727
 go_plot_height <-go_length/pfam_length
+go_plot_height <- go_plot_height+0.5
 
 pdf(snakemake@output[["enrich_plot"]], width=11, height=plot_length) # default 7x7
 plot_grid(go, pfam, ncol=1, align="v",
-          rel_heights=c(go_plot_height, 1))
+          rel_heights=c(go_plot_height, 1.2))
 dev.off()
 
 full_plot <- ggplot(full_enrich, aes(Description, log_padj)) +
   geom_point(aes(size=Count, colour=plot_label))+
-  labs(x="Pfam domains", y="-log(adj. p-value)",
+  labs(x="Overrepresented terms/domains", y="-log(adj. p-value)",
        colour="Enriched term category",
        size="No. genes \ndriving enrichment") +
   coord_flip() +

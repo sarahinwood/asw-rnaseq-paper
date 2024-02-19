@@ -4,5 +4,5 @@ sample_modifiers:
   derive:
     attributes: [r1, r2]
     sources:
-      data1: "output/joined/{experiment}/{sample_name}_r1.fq.gz"
-      data2: "output/joined/{experiment}/{sample_name}_r2.fq.gz"
+      data1: "output/joined/{Experiment}/{sample_name}_r1.fq.gz"
+      data2: "output/joined/{Experiment}/{sample_name}_r2.fq.gz"

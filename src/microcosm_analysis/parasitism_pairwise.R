@@ -28,7 +28,7 @@ library(pheatmap)
 
 dds_file <- snakemake@input[["dds_file"]]
 annotation_file <- snakemake@input[["annotation_file"]]
-parasitism_tpms <- snakemake@input[["parasitism_tpms"]]
+parasitism_tpms_file <- snakemake@input[["parasitism_tpms_file"]]
 
 ########
 # MAIN #
@@ -49,28 +49,20 @@ saveRDS(dds_parasitism, snakemake@output[["dds_file"]])
 resultsNames(dds_parasitism)
 res_group <- results(dds_parasitism, lfcThreshold = 1, alpha = 0.05)
 summary(res_group)
-resLFC <- lfcShrink(dds_parasitism, coef=4, res=res_group)
 
 ##Order based of padj
 ordered_res_group <- res_group[order(res_group$padj),]
 ##Make data table
 ordered_res_group_table <- data.table(data.frame(ordered_res_group), keep.rownames = TRUE)
-## merge with shrunk LFCs
-shrunk_LFCs <- data.table(data.frame(resLFC), keep.rownames = T)
-gene_to_shrunk_LFC <- shrunk_LFCs[,c(1,3,4)]
-setnames(gene_to_shrunk_LFC, old=c("log2FoldChange", "lfcSE"), new=c("shrunk_log2FoldChange", "shrunk_lfcSE"))
-full_res_group_table <- merge(ordered_res_group_table, gene_to_shrunk_LFC)
-ordered_full_res_group_table <- full_res_group_table[order(full_res_group_table$padj),]
-fwrite(ordered_full_res_group_table, snakemake@output[["res_table"]])
+fwrite(ordered_res_group_table, snakemake@output[["res_table"]])
 
 ##sig with annots
-ordered_sig_res_group_table <- subset(ordered_full_res_group_table, padj < 0.05)
-ordered_sig_res_group_table$abs_shrunk_LFC_above_1 <- ifelse(abs(ordered_sig_res_group_table$shrunk_log2FoldChange>1), TRUE, FALSE)
+ordered_sig_res_group_table <- subset(ordered_res_group_table, padj < 0.05)
 # read in annots and merge
 annotations <- fread(annotation_file, na.strings="")
 sig_annots <- merge(ordered_sig_res_group_table, annotations, by.x="rn", by.y="#gene_id", all.x=TRUE)
 # read TPMs and merge
-parasitism_tpms <- fread(parasitism_tpms)
+parasitism_tpms <- fread(parasitism_tpms_file)
 sig_annots_tpm <- merge(sig_annots, parasitism_tpms, by.x="rn", by.y="#gene_id")
 fwrite(sig_annots_tpm, snakemake@output[["sig_annots"]])
 
@@ -96,19 +88,28 @@ sample_to_label <- sample_to_label %>% remove_rownames %>% column_to_rownames(va
 location_colours <- list(Location = c(Dunedin="#fcfdbf", Ruakura="#fc8961"),
                          Parasitism=c(Parasitised = "#b73779", Undetected="#51127c"))
 
+##plot ordering
+callback = function(hc, mat){
+  sv = svd(t(mat))$v[,1]
+  dend = reorder(as.dendrogram(hc), wts = sv)
+  as.hclust(dend)
+}
+
 ##plot
 ##not clustered by sample
 pdf(snakemake@output[["row_clustered_heatmap"]])
-pheatmap(vst_degs_plot, cluster_rows=TRUE, cluster_cols=FALSE, show_rownames=FALSE,
+pheatmap(vst_degs_plot, cluster_rows=TRUE, cluster_cols=FALSE, clustering_callback=callback, show_rownames=FALSE,
          annotation_col=sample_to_label, annotation_colors=location_colours, annotation_names_col=FALSE,
          show_colnames = FALSE, border_color=NA, color=viridis(50))
 dev.off()
 
 pdf(snakemake@output[["col_clustered_heatmap"]])
-pheatmap(vst_degs_plot, cluster_rows=TRUE, cluster_cols=TRUE, show_rownames=FALSE,
+pheatmap(vst_degs_plot, cluster_rows=TRUE, cluster_cols=TRUE, clustering_callback=callback, show_rownames=FALSE,
          annotation_col=sample_to_label, annotation_colors=location_colours, annotation_names_col=FALSE,
          show_colnames = FALSE, border_color=NA, color=viridis(50))
 dev.off()
+
+
 
 # write log
 sessionInfo()
